@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIFA Women's Football — A Global Story</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&display=swap');
+
+  :root {
+    --purple:     #6100EC;
+    --blue:       #304FFF;
+    --navy:       #1A247B;
+    --darkgreen:  #004C3F;
+    --red:        #D60000;
+    --orange:     #FD3A04;
+    --green:      #00C752;
+    --lime:       #B6E80B;
+    --lavender:   #B387FF;
+    --skyblue:    #1E94F4;
+    --mauve:      #B869C5;
+    --maroon:     #711311;
+    --ink:        #0A0A0A;
+    --paper:      #F4F2EC;
+    --paper-dim:  #E9E5DC;
+    --text-mid:   #5A5A52;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Archivo', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  .display {
+    font-family: 'Anton', sans-serif;
+    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; height: 60px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Anton', sans-serif;
+    font-size: 18px; letter-spacing: 1px;
+    color: #fff;
+  }
+  .nav-logo img { height: 28px; width: auto; display: block; }
+  .nav-logo .accent { color: var(--lime); }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a {
+    color: rgba(255,255,255,0.65); text-decoration: none;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--lime); }
+
+  /* ── COVER ── */
+  #cover {
+    min-height: 100vh;
+    background: var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    padding: 120px 24px 60px;
+  }
+  /* decorative blob shapes inspired by the "26 graphic" / unify pattern */
+  .blob {
+    position: absolute; border-radius: 0 0 0 0;
+  }
+  .blob-1 {
+    width: 46vw; height: 46vw; max-width: 620px; max-height: 620px;
+    background: var(--skyblue);
+    border-radius: 0 60% 0 60%;
+    top: -14vw; right: -16vw;
+    opacity: 0.9;
+  }
+  .blob-2 {
+    width: 30vw; height: 30vw; max-width: 420px; max-height: 420px;
+    background: var(--red);
+    border-radius: 50% 50% 0 50%;
+    top: 6vw; right: 2vw;
+    opacity: 0.92;
+  }
+  .blob-3 {
+    width: 26vw; height: 26vw; max-width: 360px; max-height: 360px;
+    background: var(--purple);
+    border-radius: 0 0 60% 0;
+    bottom: -10vw; left: -10vw;
+    opacity: 0.9;
+  }
+  .blob-4 {
+    width: 20vw; height: 20vw; max-width: 260px; max-height: 260px;
+    background: var(--lime);
+    border-radius: 0 50% 50% 50%;
+    bottom: 4vw; left: 14vw;
+    opacity: 0.85;
+  }
+  .cover-content {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; max-width: 1100px;
+  }
+  .cover-emblem { height: 140px; width: auto; margin-bottom: 28px; filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5)); }
+  .cover-kicker {
+    font-size: 12px; letter-spacing: 6px; text-transform: uppercase;
+    color: var(--lime); margin-bottom: 18px; font-weight: 800;
+  }
+  .cover-title {
+    font-size: clamp(54px, 11vw, 130px);
+    line-height: 0.96;
+    color: #fff; text-align: center;
+    letter-spacing: -1px;
+  }
+  .cover-title .l1 { color: var(--lime); }
+  .cover-title .l2 { color: var(--red); }
+  .cover-sub {
+    margin-top: 22px;
+    font-size: 17px; font-weight: 500; color: rgba(255,255,255,0.65);
+    letter-spacing: 0.3px; text-align: center; max-width: 560px;
+  }
+  .cover-stats {
+    margin-top: 56px; display: flex; gap: 0;
+    flex-wrap: wrap; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px; overflow: hidden;
+  }
+  .c-stat {
+    text-align: center; padding: 22px 36px;
+    border-right: 1px solid rgba(255,255,255,0.12);
+  }
+  .c-stat:last-child { border-right: none; }
+  .c-stat-num {
+    font-family: 'Anton', sans-serif;
+    font-size: 46px; line-height: 1;
+    color: #fff;
+  }
+  .c-stat-label {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.45); margin-top: 6px; font-weight: 700;
+  }
+  .scroll-hint {
+    margin-top: 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: rgba(255,255,255,0.35); font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    font-weight: 700; position: relative; z-index: 2;
+  }
+  .scroll-arrow { animation: bob 1.5s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+  /* ── PATTERN STRIP (inspired by Unify Pattern) ── */
+  .pattern-strip {
+    display: flex; height: 14px; width: 100%;
+  }
+  .pattern-strip span { flex: 1; }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 100px 60px;
+    max-width: 1280px; margin: 0 auto;
+  }
+  .section-eyebrow {
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--purple); font-weight: 800; margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(34px, 4.6vw, 60px); line-height: 1.02;
+    color: var(--ink); margin-bottom: 18px;
+    text-transform: uppercase; letter-spacing: 0px;
+  }
+  .section-lead {
+    font-size: 17px; color: var(--text-mid); max-width: 620px; line-height: 1.65;
+    margin-bottom: 50px; font-weight: 500;
+  }
+  .full-bleed {
+    background: var(--ink);
+    padding: 100px 0; margin: 0;
+    max-width: 100%;
+  }
+  .full-bleed .inner { max-width: 1280px; margin: 0 auto; padding: 0 60px; }
+  .full-bleed .section-eyebrow { color: var(--lime); }
+  .full-bleed .section-title { color: #fff; }
+  .full-bleed .section-lead { color: rgba(255,255,255,0.6); }
+
+  /* ── GROWTH CHART ── */
+  .chart-container {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 16px; padding: 32px;
+    box-shadow: 8px 8px 0 var(--lime);
+  }
+  #growthChart { width: 100%; }
+
+  /* ── WORLD MAP ── */
+  #mapSection { background: var(--ink); }
+  #mapContainer {
+    position: relative;
+    background: #141414;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+  #worldMap { width: 100%; cursor: grab; display: block; }
+  #worldMap:active { cursor: grabbing; }
+  .map-tooltip {
+    position: absolute;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 10px; padding: 12px 16px;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.15s;
+    min-width: 170px;
+    box-shadow: 6px 6px 0 var(--lime);
+  }
+  .tt-country {
+    font-family: 'Anton', sans-serif;
+    font-size: 17px; text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .tt-apps {
+    font-size: 13px; color: var(--purple); font-weight: 800;
+  }
+  .tt-bar {
+    margin-top: 8px; height: 6px; border-radius: 3px;
+    background: rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .tt-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--purple), var(--red));
+    transition: width 0.3s;
+  }
+  .map-legend {
+    display: flex; align-items: center; gap: 12px; margin-top: 18px;
+    padding: 0 8px;
+  }
+  .legend-label { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .legend-bar {
+    flex: 1; height: 10px; border-radius: 5px;
+    background: linear-gradient(90deg, #1F1F1F, var(--navy), var(--blue), var(--skyblue), var(--green), var(--lime), var(--orange), var(--red));
+  }
+  .map-hint {
+    font-size: 12px; color: rgba(255,255,255,0.4);
+    text-align: center; margin-top: 12px; letter-spacing: 0.5px; font-weight: 600;
+  }
+  .zoom-controls {
+    position: absolute; top: 14px; right: 14px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .zoom-btn {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-weight: 800;
+    transition: background 0.2s, color 0.2s;
+  }
+  .zoom-btn:hover { background: var(--lime); color: var(--ink); }
+
+  /* ── WINNERS GRID ── */
+  .winners-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 22px;
+  }
+  .winner-card {
+    background: #fff;
+    border-radius: 14px; padding: 28px;
+    border: 2px solid var(--ink);
+    transition: transform 0.18s, box-shadow 0.18s;
+    position: relative; overflow: hidden;
+    box-shadow: 6px 6px 0 rgba(10,10,10,0.08);
+  }
+  .winner-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px;
+    background: var(--bar-color, var(--purple));
+  }
+  .winner-card:hover {
+    transform: translate(-3px,-3px);
+    box-shadow: 10px 10px 0 var(--bar-color, var(--purple));
+  }
+  .wc-year {
+    font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-mid); margin-bottom: 8px; font-weight: 700;
+  }
+  .wc-winner {
+    font-family: 'Anton', sans-serif;
+    font-size: 30px; text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .wc-runner { font-size: 14px; color: var(--text-mid); font-weight: 600; }
+  .wc-host { font-size: 12px; color: rgba(0,0,0,0.4); margin-top: 8px; font-weight: 600; }
+  .trophy-icon { float: right; font-size: 28px; margin-top: -4px; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px;
+    margin-bottom: 0;
+  }
+  .stat-card {
+    background: var(--card-color, var(--purple));
+    border-radius: 14px; padding: 30px 24px;
+    text-align: left;
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+  .stat-big {
+    font-family: 'Anton', sans-serif;
+    font-size: 54px; line-height: 1;
+    color: #fff;
+  }
+  .stat-desc {
+    font-size: 13px; color: rgba(255,255,255,0.85); margin-top: 10px;
+    letter-spacing: 0.2px; line-height: 1.45; font-weight: 600;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 36px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  .footer-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Anton', sans-serif;
+    font-size: 18px; letter-spacing: 1px;
+    color: #fff; text-transform: uppercase;
+  }
+  .footer-logo img { height: 30px; width: auto; }
+  .footer-note { font-size: 12px; color: rgba(255,255,255,0.35); font-weight: 600; letter-spacing: 0.5px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    section { padding: 70px 24px; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+    .cover-stats { gap: 0; }
+    .c-stat { padding: 16px 18px; }
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    footer { padding: 28px 24px; flex-direction: column; gap: 12px; text-align: center; }
+    .full-bleed .inner { padding: 0 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><img src="data:image/png;base64,EMBLEM_B64" alt="FIFA 26 emblem"><span>WOMEN'S <span class="accent">WORLD CUP</span></span></div>
+  <ul class="nav-links">
+    <li><a href="#growth">Growth</a></li>
+    <li><a href="#world">World Map</a></li>
+    <li><a href="#champions">Champions</a></li>
+    <li><a href="#milestones">Milestones</a></li>
+  </ul>
+</nav>
+
+<!-- COVER -->
+<div id="cover">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+  <div class="cover-content">
+    <img class="cover-emblem" src="data:image/png;base64,EMBLEM_B64" alt="FIFA World Cup emblem">
+    <div class="cover-kicker">FIFA Women's World Cup · 1991 – 2023</div>
+    <h1 class="cover-title display">
+      <span class="l1">The World's</span><br>Women's<br><span class="l2">Game</span>
+    </h1>
+    <p class="cover-sub">From 12 nations to 32 — three decades of football's greatest story</p>
+    <div class="cover-stats">
+      <div class="c-stat">
+        <div class="c-stat-num display">9</div>
+        <div class="c-stat-label">Tournaments</div>
+      </div>
+      <div class="c-stat">
+        <div class="c-stat-num display">32</div>
+        <div class="c-stat-label">Teams in 2023</div>
+      </div>
+      <div class="c-stat">
+        <div class="c-stat-num display">4</div>
+        <div class="c-stat-label">Champions</div>
+      </div>
+      <div class="c-stat">
+        <div class="c-stat-num display">56</div>
+        <div class="c-stat-label">Nations Competed</div>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <span>Explore</span>
+      <span class="scroll-arrow">↓</span>
+    </div>
+  </div>
+</div>
+
+<!-- PATTERN STRIP -->
+<div class="pattern-strip">
+  <span style="background:var(--purple)"></span>
+  <span style="background:var(--blue)"></span>
+  <span style="background:var(--skyblue)"></span>
+  <span style="background:var(--green)"></span>
+  <span style="background:var(--lime)"></span>
+  <span style="background:var(--orange)"></span>
+  <span style="background:var(--red)"></span>
+  <span style="background:var(--mauve)"></span>
+</div>
+
+<!-- GROWTH SECTION -->
+<section id="growth">
+  <div class="section-eyebrow">Tournament Expansion</div>
+  <h2 class="section-title display">From 12 to 32:<br>The Rise of Women's Football</h2>
+  <p class="section-lead">The FIFA Women's World Cup has grown dramatically since its inaugural edition in China in 1991, tripling its field of participants over three decades.</p>
+  <div class="chart-container">
+    <svg id="growthChart" height="360"></svg>
+  </div>
+</section>
+
+<!-- WORLD MAP SECTION -->
+<div class="full-bleed" id="mapSection">
+  <div class="inner">
+    <div class="section-eyebrow">Global Participation</div>
+    <h2 class="section-title display" style="color:#fff">Women's Football<br>Around the World</h2>
+    <p class="section-lead">Hover over any country to see how many times they've participated across all nine FIFA Women's World Cup tournaments. Scroll to zoom, drag to pan.</p>
+    <div id="mapContainer">
+      <svg id="worldMap"></svg>
+      <div class="map-tooltip" id="tooltip">
+        <div class="tt-country" id="tt-name"></div>
+        <div class="tt-apps" id="tt-apps"></div>
+        <div class="tt-bar"><div class="tt-bar-fill" id="tt-fill"></div></div>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomIn">+</button>
+        <button class="zoom-btn" id="zoomOut">−</button>
+        <button class="zoom-btn" id="zoomReset" title="Reset" style="font-size:14px;">⌂</button>
+      </div>
+    </div>
+    <div class="map-legend">
+      <span class="legend-label">0 apps</span>
+      <div class="legend-bar"></div>
+      <span class="legend-label">9 apps</span>
+    </div>
+    <p class="map-hint">Scroll to zoom · Drag to pan · Hover for details</p>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="full-bleed" style="background: var(--ink); padding: 64px 0;">
+  <div class="inner">
+    <div class="stats-row">
+      <div class="stat-card" style="--card-color: var(--purple);">
+        <div class="stat-big display">1991</div>
+        <div class="stat-desc">The first Women's World Cup in Guangdong, China</div>
+      </div>
+      <div class="stat-card" style="--card-color: var(--blue);">
+        <div class="stat-big display">5×</div>
+        <div class="stat-desc">USA have won the most titles — 1991, 1999, 2015, 2019</div>
+      </div>
+      <div class="stat-card" style="--card-color: var(--green);">
+        <div class="stat-big display">166</div>
+        <div class="stat-desc">Goals scored at the 2023 tournament — a record for Women's football</div>
+      </div>
+      <div class="stat-card" style="--card-color: var(--red);">
+        <div class="stat-big display">2M+</div>
+        <div class="stat-desc">Tickets sold at Australia & New Zealand 2023, another milestone</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAMPIONS -->
+<section id="champions">
+  <div class="section-eyebrow">Roll of Honour</div>
+  <h2 class="section-title display">World Cup Champions</h2>
+  <p class="section-lead">Nine tournaments. Four nations have lifted the trophy. The United States stand apart with four titles, while new champions have emerged in each new era.</p>
+  <div class="winners-grid" id="winnersGrid"></div>
+</section>
+
+<!-- MILESTONES -->
+<section id="milestones" style="background: var(--paper-dim); max-width: 100%; padding: 90px 60px;">
+  <div style="max-width:1280px;margin:0 auto;">
+    <div class="section-eyebrow">Key Moments</div>
+    <h2 class="section-title display">Tournament Milestones</h2>
+    <p class="section-lead">Defining moments that shaped the modern women's game.</p>
+    <div id="timeline"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo"><img src="data:image/png;base64,EMBLEM_B64" alt="FIFA emblem"><span>FIFA Women's World Cup</span></div>
+  <div class="footer-note">Data: 1991–2023 · Visualisation built with D3.js</div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════
+   DATA
+══════════════════════════════════════════ */
+const tournaments = [
+  {year:1991, teams:12, host:"China",          winner:"USA",         runner:"Norway"},
+  {year:1995, teams:12, host:"Sweden",         winner:"Norway",      runner:"Germany"},
+  {year:1999, teams:16, host:"USA",            winner:"USA",         runner:"China"},
+  {year:2003, teams:16, host:"USA",            winner:"Germany",     runner:"Sweden"},
+  {year:2007, teams:16, host:"China",          winner:"Germany",     runner:"Brazil"},
+  {year:2011, teams:16, host:"Germany",        winner:"Japan",       runner:"USA"},
+  {year:2015, teams:24, host:"Canada",         winner:"USA",         runner:"Japan"},
+  {year:2019, teams:24, host:"France",         winner:"USA",         runner:"Netherlands"},
+  {year:2023, teams:32, host:"Aus/NZ",         winner:"Spain",       runner:"England"},
+];
+
+const appearances = {
+  "United States":9,"Germany":9,"Norway":9,"Sweden":9,"Brazil":9,"Japan":8,"Australia":8,
+  "Canada":8,"China":7,"Denmark":5,"Nigeria":7,"England":5,"South Korea":5,"France":6,
+  "Mexico":4,"New Zealand":5,"Italy":4,"Russia":3,"Ghana":4,"Cameroon":3,"Colombia":3,
+  "Costa Rica":3,"Equatorial Guinea":1,"Finland":1,"Haiti":2,"Iceland":2,"Ireland":2,
+  "Morocco":1,"Netherlands":4,"Philippines":1,"Portugal":1,"South Africa":3,"Spain":4,
+  "Switzerland":2,"Tanzania":1,"Trinidad and Tobago":1,"Zambia":1,"Argentina":4,
+  "Chile":2,"Thailand":2,"Scotland":1,"Jamaica":2,"Panama":1,"Vietnam":1,"Zambia":1,
+  "Taiwan":2,"Ukraine":2,"Belgium":1,"Senegal":1
+};
+
+const milestones = [
+  {year:1991, text:"First ever FIFA Women's World Cup held in China — 12 teams, USA champions."},
+  {year:1999, text:"Expanded to 16 teams; Brandi Chastain's penalty kick celebration becomes iconic as USA win in front of 90,185 fans."},
+  {year:2003, text:"Relocated from China to USA after SARS; Germany claim the title with a 2–1 win over Sweden."},
+  {year:2011, text:"Japan become first Asian nation to win, defeating USA on penalties in a memorable final."},
+  {year:2015, text:"Tournament grows to 24 teams; USA demolish Japan 5–2 in the final — most-watched US soccer match ever."},
+  {year:2023, text:"First 32-team Women's World Cup; Spain crowned champions for the first time in Australia & New Zealand."},
+];
+
+/* ══════════════════════════════════════════
+   GROWTH LINE CHART
+══════════════════════════════════════════ */
+(function buildGrowthChart() {
+  const container = document.getElementById('growthChart');
+  const W = container.parentElement.clientWidth - 64;
+  const H = 360;
+  const margin = {top:30, right:40, bottom:50, left:50};
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top - margin.bottom;
+
+  const svg = d3.select('#growthChart')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scalePoint().domain(tournaments.map(d=>d.year)).range([0,w]).padding(0.2);
+  const y = d3.scaleLinear().domain([0,36]).range([h,0]);
+
+  // grid
+  g.append('g').selectAll('line').data(y.ticks(6)).join('line')
+    .attr('x1',0).attr('x2',w).attr('y1',d=>y(d)).attr('y2',d=>y(d))
+    .attr('stroke','rgba(10,10,10,0.08)').attr('stroke-dasharray','4,4');
+
+  // area fill
+  const area = d3.area().x(d=>x(d.year)).y0(h).y1(d=>y(d.teams)).curve(d3.curveMonotoneX);
+  g.append('path').datum(tournaments).attr('d',area)
+    .attr('fill','url(#areaGrad)');
+
+  // gradient
+  const defs = svg.append('defs');
+  const grad = defs.append('linearGradient').attr('id','areaGrad').attr('x1','0').attr('x2','0').attr('y1','0').attr('y2','1');
+  grad.append('stop').attr('offset','0%').attr('stop-color','#6100EC').attr('stop-opacity',0.28);
+  grad.append('stop').attr('offset','100%').attr('stop-color','#6100EC').attr('stop-opacity',0.02);
+
+  // line
+  const line = d3.line().x(d=>x(d.year)).y(d=>y(d.teams)).curve(d3.curveMonotoneX);
+  g.append('path').datum(tournaments).attr('d',line)
+    .attr('fill','none').attr('stroke','#6100EC').attr('stroke-width',4);
+
+  // expansion annotation bands
+  const expansions = [{year:1999,label:'16 Teams'},{year:2015,label:'24 Teams'},{year:2023,label:'32 Teams'}];
+  expansions.forEach(e=>{
+    g.append('line')
+      .attr('x1',x(e.year)).attr('x2',x(e.year)).attr('y1',0).attr('y2',h)
+      .attr('stroke','rgba(214,0,0,0.35)').attr('stroke-width',1.5).attr('stroke-dasharray','6,3');
+    g.append('text')
+      .attr('x',x(e.year)).attr('y',-8)
+      .attr('text-anchor','middle').attr('fill','#D60000')
+      .attr('font-size','11px').attr('font-weight','800').attr('font-family','Archivo, sans-serif')
+      .attr('letter-spacing','1px')
+      .text(e.label.toUpperCase());
+  });
+
+  // dots
+  g.selectAll('circle').data(tournaments).join('circle')
+    .attr('cx',d=>x(d.year)).attr('cy',d=>y(d.teams))
+    .attr('r',8).attr('fill','#B6E80B').attr('stroke','#0A0A0A').attr('stroke-width',2.5);
+
+  g.selectAll('.dot-label').data(tournaments).join('text')
+    .attr('class','dot-label')
+    .attr('x',d=>x(d.year)).attr('y',d=>y(d.teams)-16)
+    .attr('text-anchor','middle')
+    .attr('fill','#0A0A0A').attr('font-size','13px').attr('font-weight','800').attr('font-family','Archivo, sans-serif')
+    .text(d=>d.teams);
+
+  // axes
+  g.append('g').attr('transform',`translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
+    .call(ax=>{ ax.select('.domain').remove(); ax.selectAll('text').attr('fill','#5A5A52').attr('font-size','12px').attr('font-weight','700').attr('font-family','Archivo, sans-serif').attr('dy','18px'); });
+
+  g.append('g').call(d3.axisLeft(y).ticks(6).tickSize(-4))
+    .call(ax=>{ ax.select('.domain').remove(); ax.selectAll('text').attr('fill','#5A5A52').attr('font-size','11px').attr('font-weight','700'); ax.selectAll('.tick line').attr('stroke','transparent'); });
+
+  g.append('text').attr('x',w/2).attr('y',h+40).attr('text-anchor','middle')
+    .attr('fill','#5A5A52').attr('font-size','12px').attr('font-weight','700').attr('font-family','Archivo, sans-serif').attr('letter-spacing','1px')
+    .text('TOURNAMENT YEAR');
+})();
+
+/* ══════════════════════════════════════════
+   WORLD MAP
+══════════════════════════════════════════ */
+(function buildMap() {
+  const container = document.getElementById('mapContainer');
+  const W = container.clientWidth || 900;
+  const H = Math.round(W * 0.52);
+
+  const svg = d3.select('#worldMap').attr('width', W).attr('height', H).attr('viewBox',`0 0 ${W} ${H}`);
+
+  const projection = d3.geoNaturalEarth1()
+    .scale(W / 6.3)
+    .translate([W / 2, H / 2]);
+
+  const path = d3.geoPath().projection(projection);
+
+  const maxApps = d3.max(Object.values(appearances));
+  // Vibrant World Cup 26 inspired colour ramp: navy -> blue -> sky -> green -> lime -> orange -> red
+  const colorScale = d3.scaleLinear()
+    .domain([0, 1, 2.5, 4, 5.5, 7, 9])
+    .range(['#1A247B','#304FFF','#1E94F4','#00C752','#B6E80B','#FD3A04','#D60000'])
+    .interpolate(d3.interpolateRgb);
+
+  const g = svg.append('g');
+
+  // Zoom behaviour
+  const zoom = d3.zoom()
+    .scaleExtent([0.8, 10])
+    .on('zoom', e => g.attr('transform', e.transform));
+
+  svg.call(zoom);
+
+  document.getElementById('zoomIn').addEventListener('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.5));
+  document.getElementById('zoomOut').addEventListener('click', () => svg.transition().duration(300).call(zoom.scaleBy, 0.67));
+  document.getElementById('zoomReset').addEventListener('click', () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity));
+
+  const tooltip = document.getElementById('tooltip');
+  const ttName = document.getElementById('tt-name');
+  const ttApps = document.getElementById('tt-apps');
+  const ttFill = document.getElementById('tt-fill');
+
+  const nameMap = {
+    "United States of America":"United States","South Korea":"South Korea","Russia":"Russia",
+    "Ivory Coast":"Ivory Coast","Republic of Ireland":"Ireland","Taiwan":"Taiwan",
+    "England":"England", "Great Britain":"United Kingdom"
+  };
+
+  function getApps(name) {
+    if (appearances[name] !== undefined) return appearances[name];
+    if (nameMap[name] && appearances[nameMap[name]] !== undefined) return appearances[nameMap[name]];
+    for (const [k,v] of Object.entries(appearances)) {
+      if (name && name.includes(k)) return v;
+    }
+    return 0;
+  }
+
+  // Ocean background
+  svg.insert('rect','g').attr('width',W).attr('height',H).attr('fill','#141414');
+
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    .then(r=>r.json())
+    .then(world => {
+      const countries = topojson.feature(world, world.objects.countries);
+      // ISO 3166-1 numeric to name — using a small lookup
+      const iso = {4:"Afghanistan",8:"Albania",12:"Algeria",24:"Angola",32:"Argentina",36:"Australia",40:"Austria",50:"Bangladesh",56:"Belgium",68:"Bolivia",76:"Brazil",100:"Bulgaria",116:"Cambodia",120:"Cameroon",124:"Canada",140:"Central African Republic",152:"Chile",156:"China",170:"Colombia",188:"Costa Rica",192:"Cuba",191:"Croatia",208:"Denmark",218:"Ecuador",818:"Egypt",231:"Ethiopia",246:"Finland",250:"France",276:"Germany",288:"Ghana",320:"Guatemala",332:"Haiti",340:"Honduras",348:"Hungary",356:"India",360:"Indonesia",364:"Iran",368:"Iraq",372:"Ireland",376:"Israel",380:"Italy",388:"Jamaica",392:"Japan",400:"Jordan",404:"Kenya",410:"South Korea",408:"North Korea",422:"Lebanon",504:"Morocco",484:"Mexico",528:"Netherlands",554:"New Zealand",566:"Nigeria",578:"Norway",586:"Pakistan",591:"Panama",604:"Peru",608:"Philippines",616:"Poland",620:"Portugal",630:"Puerto Rico",642:"Romania",643:"Russia",682:"Saudi Arabia",686:"Senegal",694:"Sierra Leone",703:"Slovakia",710:"South Africa",724:"Spain",752:"Sweden",756:"Switzerland",158:"Taiwan",834:"Tanzania",764:"Thailand",780:"Trinidad and Tobago",792:"Turkey",800:"Uganda",804:"Ukraine",826:"United Kingdom",840:"United States",858:"Uruguay",862:"Venezuela",704:"Vietnam",887:"Yemen",894:"Zambia",716:"Zimbabwe",180:"Democratic Republic of the Congo",384:"Ivory Coast",44:"Bahamas",466:"Mali",458:"Malaysia",454:"Malawi",516:"Namibia",562:"Niger"};
+
+      g.selectAll('path.country')
+        .data(countries.features)
+        .join('path')
+        .attr('class','country')
+        .attr('d', path)
+        .attr('fill', d => {
+          const name = iso[+d.id] || '';
+          const apps = getApps(name);
+          return apps > 0 ? colorScale(apps) : '#2A2A2A';
+        })
+        .attr('stroke','rgba(244,242,236,0.15)')
+        .attr('stroke-width', 0.5)
+        .on('mouseover', function(event, d) {
+          const name = iso[+d.id] || 'Unknown';
+          const apps = getApps(name);
+          d3.select(this).attr('stroke','#B6E80B').attr('stroke-width',1.5);
+          ttName.textContent = name;
+          ttApps.textContent = apps > 0 ? `${apps} World Cup appearance${apps!==1?'s':''}` : 'No appearances';
+          ttFill.style.width = `${(apps/maxApps)*100}%`;
+          tooltip.style.opacity = 1;
+          const rect = container.getBoundingClientRect();
+          let tx = event.clientX - rect.left + 14;
+          let ty = event.clientY - rect.top - 60;
+          if (tx + 180 > W) tx = event.clientX - rect.left - 184;
+          if (ty < 0) ty = 8;
+          tooltip.style.left = tx + 'px';
+          tooltip.style.top = ty + 'px';
+
+          // Zoom-in on hover for small countries
+          if (apps > 0) {
+            const bounds = path.bounds(d);
+            const bW = bounds[1][0]-bounds[0][0], bH = bounds[1][1]-bounds[0][1];
+            if (bW < 30 && bH < 30) {
+              const cx = (bounds[0][0]+bounds[1][0])/2;
+              const cy = (bounds[0][1]+bounds[1][1])/2;
+              const scale = Math.min(8, 0.9 / Math.max(bW/W, bH/H));
+              svg.transition().duration(350).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(W/2, H/2).scale(scale).translate(-cx,-cy)
+              );
+            }
+          }
+        })
+        .on('mousemove', function(event) {
+          const rect = container.getBoundingClientRect();
+          let tx = event.clientX - rect.left + 14;
+          let ty = event.clientY - rect.top - 60;
+          if (tx + 180 > W) tx = event.clientX - rect.left - 184;
+          if (ty < 0) ty = 8;
+          tooltip.style.left = tx + 'px';
+          tooltip.style.top = ty + 'px';
+        })
+        .on('mouseout', function() {
+          d3.select(this).attr('stroke','rgba(244,242,236,0.15)').attr('stroke-width',0.5);
+          tooltip.style.opacity = 0;
+        });
+    })
+    .catch(() => {
+      g.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle')
+        .attr('fill','rgba(255,255,255,0.4)').attr('font-size','14px')
+        .text('Map could not load — check your connection');
+    });
+})();
+
+/* ══════════════════════════════════════════
+   WINNERS CARDS
+══════════════════════════════════════════ */
+(function buildWinners() {
+  const grid = document.getElementById('winnersGrid');
+  const flagEmoji = {USA:'🇺🇸',Norway:'🇳🇴',Germany:'🇩🇪',Japan:'🇯🇵',Spain:'🇪🇸'};
+  const accentCycle = ['var(--purple)','var(--blue)','var(--red)','var(--green)','var(--orange)','var(--mauve)','var(--skyblue)','var(--lime)','var(--maroon)'];
+  tournaments.forEach((t,i)=>{
+    const card = document.createElement('div');
+    card.className='winner-card';
+    card.style.setProperty('--bar-color', accentCycle[i % accentCycle.length]);
+    card.innerHTML=`
+      <div class="wc-year">${t.year} · ${t.host}</div>
+      <div class="wc-winner display">${flagEmoji[t.winner]||'🏆'} ${t.winner}</div>
+      <div class="wc-runner">Runner-up: ${t.runner}</div>
+      <div class="trophy-icon">🏆</div>
+    `;
+    grid.appendChild(card);
+  });
+})();
+
+/* ══════════════════════════════════════════
+   MILESTONES TIMELINE
+══════════════════════════════════════════ */
+(function buildTimeline() {
+  const el = document.getElementById('timeline');
+  el.style.cssText='display:flex;flex-direction:column;gap:0;position:relative;';
+  const line=document.createElement('div');
+  line.style.cssText='position:absolute;left:52px;top:16px;bottom:16px;width:3px;background:linear-gradient(180deg,#6100EC,#D60000);border-radius:2px;';
+  el.appendChild(line);
+  milestones.forEach(m=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:flex-start;gap:24px;padding:20px 0;position:relative;';
+    row.innerHTML=`
+      <div style="min-width:104px;display:flex;align-items:center;justify-content:flex-end;gap:12px;">
+        <span style="font-family:Anton,sans-serif;font-size:22px;color:#0A0A0A;">${m.year}</span>
+        <div style="width:16px;height:16px;border-radius:50%;background:#B6E80B;border:3px solid #F4F2EC;box-shadow:0 0 0 2px #0A0A0A;flex-shrink:0;"></div>
+      </div>
+      <div style="padding-top:2px;font-size:15px;color:#5A5A52;line-height:1.6;max-width:640px;font-weight:500;">${m.text}</div>
+    `;
+    el.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>
